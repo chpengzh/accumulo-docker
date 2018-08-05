@@ -1,4 +1,4 @@
-# Apache-Accumulo Docker for local test
+# Apache-Accumulo Docker
 
 This docker image is **only for test**! 
 
