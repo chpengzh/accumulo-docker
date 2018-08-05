@@ -1,0 +1,100 @@
+#!/bin/bash
+
+echo '----------------------- apache-accumulo components ------------------------------'
+echo 'author: chpengzh<pengzhi.chen@isinonet.com>'
+echo 'create_time: 2017-08-05'
+
+ssh_port=22
+workdir=/root
+softdir=/opt
+
+echo && echo '=====> step1: configure zookeeper' && echo
+
+if [ ! -d "$workdir/zookeeper" ]; then
+    mkdir -p $workdir/zookeeper/data $workdir/zookeeper/log
+    echo ${zookeeper_id} > $workdir/zookeeper/data/myid
+
+    echo ">> configure zookeeper hosts{$zookeeper_hosts}"
+    zk_conf=$softdir/zookeeper/conf/zoo.cfg
+    echo "tickTime=2000"                   		>  $zk_conf
+    echo "initLimit=10"				            >> $zk_conf
+    echo "syncLimit=5"				            >> $zk_conf
+    echo "dataDir=$workdir/zookeeper/data"      >> $zk_conf
+    echo "clientPort=2181"				        >> $zk_conf
+    id=0
+    for host in $(echo $zookeeper_hosts | tr "," "\n")
+    do
+        echo "server.$id=$host:2888:3888"       >> $zk_conf
+        let id=${id}+1
+    done
+    cp -r $softdir/zookeeper/conf $workdir/zookeeper
+else
+    rm -rf $softdir/zookeeper/conf
+    cp -r $workdir/zookeeper/conf $softdir/zookeeper
+fi
+
+echo && echo '=====> step2: configure hadoop' && echo
+
+if [ ! -d "$workdir/hadoop" ]; then
+    mkdir -p $workdir/hadoop/data/namenode $workdir/hadoop/data/datanode
+
+    echo ">> configure hadoop host, master{$hadoop_master}, slaves{$hadoop_slaves}"
+    hdp_conf_prefix=$softdir/hadoop/etc/hadoop
+    sed -i '25 c'"export JAVA_HOME=${JAVA_HOME}" $hdp_conf_prefix/hadoop-env.sh
+    sed -i '99 c'"export HADOOP_SSH_OPTS=\"-p $ssh_port\"" $hdp_conf_prefix/hadoop-env.sh
+    sed -i '26 c'"export JAVA_HOME=${JAVA_HOME}" $hdp_conf_prefix/yarn-env.sh
+
+    sed -i '24 c'"<value>$workdir/hadoop/data/datanode</value>" $hdp_conf_prefix/hdfs-site.xml
+    sed -i '28 c'"<value>$workdir/hadoop/data/namenode</value>" $hdp_conf_prefix/hdfs-site.xml
+    sed -i '20 c'"<value>hdfs://$hadoop_master:9000</value>" $hdp_conf_prefix/core-site.xml
+    sed -i '23 c'"<value>$hadoop_master</value>" $hdp_conf_prefix/yarn-site.xml
+
+    echo $hadoop_master > $hdp_conf_prefix/masters
+
+    rm -rf $hdp_conf_prefix/slaves
+    for host in $(echo $hadoop_slaves | tr "," "\n")
+    do
+        echo $host >> $hdp_conf_prefix/slaves
+    done
+    cp -r $softdir/hadoop/etc $workdir/hadoop
+else
+    rm -rf $softdir/hadoop/etc
+    cp -r $workdir/hadoop/etc $softdir/hadoop
+fi
+
+echo && echo '=====> step3: configure accumulo' && echo
+
+if [ ! -d "$workdir/accumulo" ]; then
+    mkdir -p $workdir/accumulo
+
+    echo ">> configure accumulo host, master{$accumulo_master}, slaves{$accumulo_slaves}"
+    ac_conf_prefix=$softdir/accumulo/conf
+    sed -i '31 c'"test -z "$HADOOP_PREFIX" && export HADOOP_PREFIX=/opt/hadoop" $ac_conf_prefix/accumulo-env.sh
+    zk_host_st=""
+    for host in $(echo $zookeeper_hosts | tr ',' ' ')
+    do
+        zk_host_st="$zk_host_st,$host:2181"
+    done
+    zk_host_st=${zk_host_st:1}
+    sed -i '32 c'"<value>$zk_host_st</value>" $ac_conf_prefix/accumulo-site.xml
+    sed -i '26 c'"<value>hdfs://$hadoop_master:9000/accumulo</value>" $ac_conf_prefix/accumulo-site.xml
+    echo $accumulo_master > $ac_conf_prefix/masters
+    echo $accumulo_master > $ac_conf_prefix/gc
+    echo $accumulo_master > $ac_conf_prefix/monitor
+    rm -rf $ac_conf_prefix/slaves
+    for host in $(echo $accumulo_slaves | tr "," "\n")
+    do
+        echo $host >> $ac_conf_prefix/slaves
+    done
+
+    cp -r $ac_conf_prefix $workdir/accumulo
+else
+    rm -rf $softdir/accumulo/conf
+    cp -r $workdir/accumulo/conf $softdir/accumulo
+fi
+
+echo && echo '=====> step final: start ssh service' && echo
+service ssh restart
+
+echo && echo 'apache-accumulo components configure success !!' && echo
+

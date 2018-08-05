@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# start zookeeper
+for host in $(echo ${zookeeper_hosts} | tr "," "\n")
+do
+    ssh ${host} -o StrictHostKeyChecking=no \
+        /opt/bin/zk-start
+done
+
+# initiate hdfs
+ssh ${hadoop_master} -o StrictHostKeyChecking=no \
+    hdfs namenode -format
+ssh ${hadoop_master} -o StrictHostKeyChecking=no \
+    /opt/hadoop/sbin/start-all.sh
+
+# initiate accumulo
+ssh ${accumulo_master} -o StrictHostKeyChecking=no \
+    accumulo init \
+    --instance-name ${accumulo_instance_name} \
+    -u root \
+    --password ${accumulo_root_password}
+ssh ${accumulo_master} -o StrictHostKeyChecking=no \
+    /opt/accumulo/bin/start-all.sh

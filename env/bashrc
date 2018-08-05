@@ -1,0 +1,23 @@
+#-- java --
+export JAVA_HOME=/srv/java/jdk
+export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+export PATH=$PATH:$JAVA_HOME/bin
+
+#-- zookeeper  --
+export ZOOKEEPER_HOME=/opt/zookeeper
+export PATH=$PATH:$ZOOKEEPER_HOME/bin
+
+#-- hadoop --
+export HADOOP_HOME=/opt/hadoop
+export HADOOP_PREFIX=/opt/hadoop
+export HADOOP_MAPRED_HOME=${HADOOP_HOME}
+export HADOOP_COMMON_HOME=${HADOOP_HOME}
+export HADOOP_HDFS_HOME=${HADOOP_HOME}
+export YARN_HOME=${HADOOP_HOME}
+export HADOOP_CONFDIR=${HADOOP_HOME}/etc/hadoop
+export HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
+export PATH=$PATH:${HADOOP_HOME}/bin
+
+#-- accumulo --
+export ACCUMULO_HOME=/opt/accumulo
+export PATH=$PATH:$ACCUMULO_HOME/bin
